@@ -211,6 +211,81 @@ select,
   margin-right: auto;
 }
 
+.library-info {
+  position: relative;
+  margin-left: auto;
+}
+
+.library-info-trigger {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--bg-raised);
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 13px;
+  font-style: italic;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+}
+
+.library-info-trigger:hover,
+.library-info-trigger[aria-expanded='true'] {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg-raised));
+}
+
+.library-info-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 45;
+  width: min(260px, calc(100vw - 32px));
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-raised);
+  box-shadow: 0 10px 28px color-mix(in srgb, #000 18%, transparent);
+}
+
+.library-info-heading {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.library-info-heading + .library-info-heading,
+.library-info-list + .library-info-heading,
+.library-info-empty + .library-info-heading {
+  margin-top: 12px;
+}
+
+.library-info-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.library-info-filename {
+  word-break: break-all;
+  color: var(--text-muted);
+}
+
+.library-info-empty {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
 .library {
   flex: 1;
   min-height: 0;
@@ -305,6 +380,10 @@ select,
 .group.is-active {
   background: var(--bg-raised);
   box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.library.is-selecting .group.is-checked {
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg-raised));
 }
 
 .group-row {
@@ -1229,6 +1308,12 @@ select,
 
   .library-pane-actions .btn {
     min-height: 44px;
+  }
+
+  .library-info-trigger {
+    width: 44px;
+    height: 44px;
+    font-size: 16px;
   }
 
   .app.is-mobile.is-detail-pane .detail {

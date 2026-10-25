@@ -46,7 +46,7 @@ src/web/*        ← nur Web (DeskApi IndexedDB, Zip, Bootstrap)
 - Einträge: Suno **und** Allgemein (`kind`), Titel, Style/Lyrics bzw. Rolle/Anwendung/Prompt, Notizen, Tags, Sterne, Versionen
 - Cover + Audio (lokal/URL), Publish-Links, Filter inkl. Art
 - SPD-**Zip** (`.spd.zip`) Export/Import inkl. Medien — Toolbar „Bibliothek sichern“ + Eintrag-Export; reines JSON weiter importierbar
-- **Auto-Backup (nur Mac/Electron):** Toolbar „Auto-Backup“ — täglich stilles `.spd.zip` in wählbaren Ordner (Default `~/Documents/Library Desk Backups`, 03:00, 14 behalten, Catch-up beim Start). Beim **App-Beenden** (Cmd+Q) immer Nachfrage: Mit Backup / Ohne / Abbrechen. Web: nur manueller Export.
+- **Auto-Backup (nur Mac/Electron):** Toolbar „Auto-Backup“ — täglich stilles `.spd.zip` … Beim **App-Beenden** Backup-Dialog **nur bei Library-Diff** (`lastBackupContentHash` in `auto-backup.json`). Fehlt der Hash trotz `lastSuccessAt` (Upgrade), wird er beim Start aus dem aktuellen Stand geseedet. „Ohne Backup“ lässt den Hash unverändert. Spec: `docs/superpowers/specs/2026-10-25-quit-backup-diff-design.md`. Web: nur manueller Export.
 - Mobile Master-Detail; Cover-Glow; Split-Breite; Tag-Undo/Redo
 - Leerer Titel bleibt editierbar (kein Zwang „Ohne Titel“)
 - DB-Migration `kind` + Prompt-Felder: **ALTER zuerst, Index danach** (`src/main/db.ts`)

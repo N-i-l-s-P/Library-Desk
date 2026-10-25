@@ -4,6 +4,11 @@ import { BrowserWindow, dialog, ipcMain, shell } from 'electron'
 import type { AudioRef } from '../shared/types'
 import { collectEntriesForExport } from '../shared/exportGroup'
 import { entryExportFilename } from '../shared/exportFormat'
+import {
+  LAST_EXPORT_SETTING_KEY,
+  makeLastExportInfo,
+  serializeLastExport,
+} from '../shared/lastExport'
 import { looksLikeZip } from '../shared/spdZip'
 import type { CreateEntryInput, ListQuery, UpdateEntryPatch } from '../shared/deskApi'
 import {
@@ -304,6 +309,10 @@ export function registerIpc(db: AppDatabase, userData: string): void {
     return updated
   })
 
+  function rememberExport(filePath: string): void {
+    setSetting(db, LAST_EXPORT_SETTING_KEY, serializeLastExport(makeLastExportInfo(filePath)))
+  }
+
   ipcMain.handle('io:exportLibrary', async () => {
     const picked = await saveFile({
       title: 'Bibliothek sichern',
@@ -314,6 +323,7 @@ export function registerIpc(db: AppDatabase, userData: string): void {
     const entries = listEntries(db, { search: '', facet: 'all', kind: 'all', sort: 'newest' })
     const zip = await buildSpdZipBuffer(userData, audioRoot, coverRoot, attachmentsRoot, entries)
     writeFileSync(picked.filePath, Buffer.from(zip))
+    rememberExport(picked.filePath)
     return { filePath: picked.filePath }
   })
 
@@ -329,6 +339,7 @@ export function registerIpc(db: AppDatabase, userData: string): void {
     if (picked.canceled || !picked.filePath) return null
     const zip = await buildSpdZipBuffer(userData, audioRoot, coverRoot, attachmentsRoot, bundle)
     writeFileSync(picked.filePath, Buffer.from(zip))
+    rememberExport(picked.filePath)
     return { filePath: picked.filePath }
   }
 

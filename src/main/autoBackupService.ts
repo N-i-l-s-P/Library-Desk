@@ -12,7 +12,17 @@ import { join } from 'node:path'
 import { BrowserWindow, dialog } from 'electron'
 import type { AppDatabase } from './db'
 import { listEntries } from './entriesRepo'
-import { buildSpdZipBuffer } from './spdBundle'
+import { setSetting } from './settingsRepo'
+import { computeLibraryContentHash, buildSpdZipBuffer } from './spdBundle'
+import {
+  LAST_EXPORT_SETTING_KEY,
+  makeLastExportInfo,
+  serializeLastExport,
+} from '../shared/lastExport'
+import {
+  shouldPromptQuitBackup,
+  shouldSeedBackupContentHash,
+} from '../shared/libraryContentHash'
 import {
   type AutoBackupSettings,
   type AutoBackupSettingsPatch,
@@ -99,6 +109,12 @@ export async function runAutoBackup(active: AutoBackupDeps = requireDeps()): Pro
       kind: 'all',
       sort: 'newest',
     })
+    const contentHash = computeLibraryContentHash(
+      active.audioRoot,
+      active.coverRoot,
+      active.attachmentsRoot,
+      entries,
+    )
     const zip = await buildSpdZipBuffer(
       active.userData,
       active.audioRoot,
@@ -112,11 +128,17 @@ export async function runAutoBackup(active: AutoBackupDeps = requireDeps()): Pro
     writeFileSync(tempPath, Buffer.from(zip))
     renameSync(tempPath, finalPath)
     rotateAutoBackups(settings.folderPath, settings.retainCount)
+    setSetting(
+      active.db,
+      LAST_EXPORT_SETTING_KEY,
+      serializeLastExport(makeLastExportInfo(finalPath, new Date(attemptAt))),
+    )
     const next: AutoBackupSettings = {
       ...settings,
       lastAttemptAt: attemptAt,
       lastSuccessAt: attemptAt,
       lastError: null,
+      lastBackupContentHash: contentHash,
     }
     writeAutoBackupSettings(active.settingsPath, next)
     active.notify?.({ ok: true, message: 'Automatisches Backup gespeichert.', filePath: finalPath })
@@ -168,8 +190,37 @@ function scheduleNext(): void {
   }, delay)
 }
 
+/** One-time upgrade: persist content hash when lastSuccessAt exists but hash is missing. */
+export function seedBackupContentHashIfNeeded(active: AutoBackupDeps = requireDeps()): void {
+  const settings = readAutoBackupSettings(active.settingsPath, active.defaultFolderPath)
+  if (!shouldSeedBackupContentHash(settings.lastBackupContentHash, settings.lastSuccessAt)) {
+    return
+  }
+  const entries = listEntries(active.db, {
+    search: '',
+    facet: 'all',
+    kind: 'all',
+    sort: 'newest',
+  })
+  const contentHash = computeLibraryContentHash(
+    active.audioRoot,
+    active.coverRoot,
+    active.attachmentsRoot,
+    entries,
+  )
+  writeAutoBackupSettings(active.settingsPath, {
+    ...settings,
+    lastBackupContentHash: contentHash,
+  })
+}
+
 export function startAutoBackupScheduler(active: AutoBackupDeps): void {
   deps = active
+  try {
+    seedBackupContentHashIfNeeded(active)
+  } catch {
+    // Seed optional — Quit fällt sonst auf Dialog zurück
+  }
   const settings = readAutoBackupSettings(active.settingsPath, active.defaultFolderPath)
   if (settings.enabled && needsCatchUp(true, settings.lastSuccessAt, new Date(), settings.timeMinutes)) {
     void (async () => {
@@ -205,6 +256,7 @@ export function updateAutoBackupSettings(patch: AutoBackupSettingsPatch): AutoBa
   normalized.lastSuccessAt = current.lastSuccessAt
   normalized.lastError = current.lastError
   normalized.lastAttemptAt = current.lastAttemptAt
+  normalized.lastBackupContentHash = current.lastBackupContentHash
   writeAutoBackupSettings(active.settingsPath, normalized)
   scheduleNext()
   return normalized
@@ -236,6 +288,25 @@ export function broadcastAutoBackupNotice(payload: {
   for (const win of BrowserWindow.getAllWindows()) {
     win.webContents.send('autoBackup:notice', payload)
   }
+}
+
+/** true → Quit-Dialog zeigen; false → still beenden (Library unverändert / leer). */
+export function shouldAskQuitBackup(): boolean {
+  const active = requireDeps()
+  const settings = readAutoBackupSettings(active.settingsPath, active.defaultFolderPath)
+  const entries = listEntries(active.db, {
+    search: '',
+    facet: 'all',
+    kind: 'all',
+    sort: 'newest',
+  })
+  const currentHash = computeLibraryContentHash(
+    active.audioRoot,
+    active.coverRoot,
+    active.attachmentsRoot,
+    entries,
+  )
+  return shouldPromptQuitBackup(currentHash, settings.lastBackupContentHash, entries.length > 0)
 }
 
 export { AUTO_BACKUP_PREFIX }

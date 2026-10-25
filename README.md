@@ -55,7 +55,7 @@ Vitest läuft unter Electron (`ELECTRON_RUN_AS_NODE=1`), damit `better-sqlite3` 
 
 **Bibliothek sichern** / Eintrag-**Export** schreiben eine `.spd.zip` (eine Datei, inkl. lokaler Audio- und Cover-Dateien). Import akzeptiert `.spd.zip` sowie weiterhin `.spd.json` / Mastermind-JSON. URL-Audio bleibt in der JSON-Metadaten-Datei im Zip.
 
-**Auto-Backup (nur Desktop):** Toolbar → **Auto-Backup**. Täglich stilles Voll-Backup als `.spd.zip` (Default 03:00, Ordner `~/Documents/Library Desk Backups`, 14 Dateien behalten). App muss laufen; verpasste Slots werden beim Start nachgeholt. Web: nur manueller Export.
+**Auto-Backup (nur Desktop):** Toolbar → **Auto-Backup**. Täglich stilles Voll-Backup als `.spd.zip` (Default 03:00, Ordner `~/Documents/Library Desk Backups`, 14 Dateien behalten). App muss laufen; verpasste Slots werden beim Start nachgeholt. Beim **Beenden** erscheint der Backup-Dialog nur, wenn sich die Bibliothek seit dem letzten erfolgreichen Backup geändert hat (sonst stilles Quit). „Ohne Backup“ aktualisiert den Diff-Hash nicht. Web: nur manueller Export (kein Quit-Dialog).
 
 Import akzeptiert:
 - Desk-Bundle (`format: "suno-prompt-desk"`)

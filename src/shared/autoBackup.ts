@@ -13,6 +13,8 @@ export interface AutoBackupSettings {
   lastSuccessAt: string | null
   lastError: string | null
   lastAttemptAt: string | null
+  /** SHA-256 of library content after last successful backup (quit-diff). */
+  lastBackupContentHash: string | null
 }
 
 export type AutoBackupSettingsPatch = Partial<
@@ -111,6 +113,8 @@ export function normalizeAutoBackupSettings(
   raw: Partial<AutoBackupSettings> | null | undefined,
   defaultFolderPath: string,
 ): AutoBackupSettings {
+  const hash =
+    typeof raw?.lastBackupContentHash === 'string' ? raw.lastBackupContentHash.trim() : ''
   return {
     enabled: Boolean(raw?.enabled),
     timeMinutes: clampTimeMinutes(raw?.timeMinutes ?? AUTO_BACKUP_DEFAULT_TIME_MINUTES),
@@ -122,5 +126,6 @@ export function normalizeAutoBackupSettings(
     lastSuccessAt: typeof raw?.lastSuccessAt === 'string' ? raw.lastSuccessAt : null,
     lastError: typeof raw?.lastError === 'string' ? raw.lastError : null,
     lastAttemptAt: typeof raw?.lastAttemptAt === 'string' ? raw.lastAttemptAt : null,
+    lastBackupContentHash: hash.length > 0 ? hash : null,
   }
 }

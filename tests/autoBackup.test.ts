@@ -7,6 +7,7 @@ import {
   isAutoBackupFilename,
   needsCatchUp,
   nextDueAt,
+  normalizeAutoBackupSettings,
   startOfLastDueSlot,
   timeMinutesToInputValue,
 } from '../src/shared/autoBackup'
@@ -38,6 +39,18 @@ describe('autoBackup schedule', () => {
     expect(needsCatchUp(true, null, now, 180)).toBe(true)
     expect(needsCatchUp(true, new Date(2026, 9, 10, 3, 5, 0).toISOString(), now, 180)).toBe(false)
     expect(needsCatchUp(true, new Date(2026, 9, 9, 3, 0, 0).toISOString(), now, 180)).toBe(true)
+  })
+})
+
+describe('normalizeAutoBackupSettings', () => {
+  it('persists lastBackupContentHash and defaults to null', () => {
+    expect(normalizeAutoBackupSettings(null, '/backups').lastBackupContentHash).toBeNull()
+    expect(
+      normalizeAutoBackupSettings(
+        { lastBackupContentHash: '  deadbeef  ' },
+        '/backups',
+      ).lastBackupContentHash,
+    ).toBe('deadbeef')
   })
 })
 

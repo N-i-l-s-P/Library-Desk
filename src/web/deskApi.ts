@@ -5,6 +5,11 @@ import {
 } from '../shared/autoBackup'
 import { collectEntriesForExport } from '../shared/exportGroup'
 import { entryExportFilename } from '../shared/exportFormat'
+import {
+  LAST_EXPORT_SETTING_KEY,
+  makeLastExportInfo,
+  serializeLastExport,
+} from '../shared/lastExport'
 import { canOpenInBrowser, mimeFromFilename } from '../shared/mime'
 import { looksLikeZip } from '../shared/spdZip'
 import type { DeskApi } from '../shared/deskApi'
@@ -278,6 +283,11 @@ export async function createWebDeskApi(): Promise<DeskApi> {
         const zip = await buildWebSpdZip(db, all)
         const name = `library-desk-${new Date().toISOString().slice(0, 10)}.spd.zip`
         downloadBlob(name, new Blob([zip], { type: 'application/zip' }))
+        await settings.setSetting(
+          db,
+          LAST_EXPORT_SETTING_KEY,
+          serializeLastExport(makeLastExportInfo(name)),
+        )
         return { filePath: name }
       },
       exportEntry: async (id) => {
@@ -293,6 +303,11 @@ export async function createWebDeskApi(): Promise<DeskApi> {
         const name = entryExportFilename(entry)
         const zip = await buildWebSpdZip(db, bundle)
         downloadBlob(name, new Blob([zip], { type: 'application/zip' }))
+        await settings.setSetting(
+          db,
+          LAST_EXPORT_SETTING_KEY,
+          serializeLastExport(makeLastExportInfo(name)),
+        )
         return { filePath: name }
       },
       exportEntries: async (ids) => {
@@ -313,6 +328,11 @@ export async function createWebDeskApi(): Promise<DeskApi> {
             : `auswahl-${new Date().toISOString().slice(0, 10)}.spd.zip`
         const zip = await buildWebSpdZip(db, bundle)
         downloadBlob(name, new Blob([zip], { type: 'application/zip' }))
+        await settings.setSetting(
+          db,
+          LAST_EXPORT_SETTING_KEY,
+          serializeLastExport(makeLastExportInfo(name)),
+        )
         return { filePath: name }
       },
       importLibrary: async (): Promise<ImportLibraryResult | null> => {
@@ -337,6 +357,7 @@ export async function createWebDeskApi(): Promise<DeskApi> {
         lastSuccessAt: null,
         lastError: null,
         lastAttemptAt: null,
+        lastBackupContentHash: null,
       }),
       setSettings: async () => {
         throw new Error('Automatisches Backup nur in der Desktop-App')

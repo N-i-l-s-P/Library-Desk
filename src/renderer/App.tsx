@@ -3,9 +3,12 @@ import { getDesk } from '@renderer/api'
 import { AutoBackupDialog } from '@renderer/components/AutoBackupDialog'
 import { ConfirmDialog } from '@renderer/components/ConfirmDialog'
 import { EntryEditor, type EditorHandle } from '@renderer/components/EntryEditor'
+import { LibraryInfoButton } from '@renderer/components/LibraryInfoButton'
 import { LibraryList } from '@renderer/components/LibraryList'
 import { NewKindDialog } from '@renderer/components/NewKindDialog'
 import { Toolbar } from '@renderer/components/Toolbar'
+import { groupEntriesForDisplay } from '@shared/versionGroups'
+import { idsInRange } from '@shared/selectionRange'
 import type { EntryKind } from '@shared/types'
 import { useCoverAmbienceLayers } from '@renderer/hooks/useCoverAmbience'
 import { useLibrary } from '@renderer/hooks/useLibrary'
@@ -69,6 +72,7 @@ export default function App(): JSX.Element {
   const [pendingBulkDeleteIds, setPendingBulkDeleteIds] = useState<string[] | null>(null)
   const [selecting, setSelecting] = useState(false)
   const [selectedGroupIds, setSelectedGroupIds] = useState<Set<string>>(() => new Set())
+  const selectionAnchorRef = useRef<string | null>(null)
   const [mobilePane, setMobilePane] = useState<MobilePane>('list')
   const [newKindOpen, setNewKindOpen] = useState(false)
   const [autoBackupOpen, setAutoBackupOpen] = useState(false)
@@ -80,6 +84,9 @@ export default function App(): JSX.Element {
     library.query.search.trim().length > 0 ||
     library.query.facet !== 'all' ||
     library.query.kind !== 'all'
+  const displayGroupKeys = groupEntriesForDisplay(library.entries).map((group) => group.key)
+  const allGroupsSelected =
+    displayGroupKeys.length > 0 && displayGroupKeys.every((key) => selectedGroupIds.has(key))
 
   async function createOfKind(kind: EntryKind): Promise<void> {
     try {
@@ -372,6 +379,22 @@ export default function App(): JSX.Element {
                 <button
                   type="button"
                   className="btn"
+                  disabled={library.busy || displayGroupKeys.length === 0}
+                  onClick={() => {
+                    if (allGroupsSelected) {
+                      setSelectedGroupIds(new Set())
+                      selectionAnchorRef.current = null
+                      return
+                    }
+                    setSelectedGroupIds(new Set(displayGroupKeys))
+                    selectionAnchorRef.current = displayGroupKeys[0] ?? null
+                  }}
+                >
+                  {allGroupsSelected ? 'Keine' : 'Alle'}
+                </button>
+                <button
+                  type="button"
+                  className="btn"
                   disabled={library.busy || selectedGroupIds.size === 0}
                   onClick={() => {
                     const ids = library.catalog
@@ -387,6 +410,7 @@ export default function App(): JSX.Element {
                       await library.exportEntries(ids)
                       setSelecting(false)
                       setSelectedGroupIds(new Set())
+                      selectionAnchorRef.current = null
                     })()
                   }}
                 >
@@ -413,6 +437,7 @@ export default function App(): JSX.Element {
                   onClick={() => {
                     setSelecting(false)
                     setSelectedGroupIds(new Set())
+                    selectionAnchorRef.current = null
                   }}
                 >
                   Abbrechen
@@ -435,10 +460,12 @@ export default function App(): JSX.Element {
                   onClick={() => {
                     setSelecting(true)
                     setSelectedGroupIds(new Set())
+                    selectionAnchorRef.current = null
                   }}
                 >
                   Auswählen
                 </button>
+                <LibraryInfoButton catalog={library.catalog} />
               </>
             )}
           </div>
@@ -455,7 +482,13 @@ export default function App(): JSX.Element {
               library.select(id)
               if (isMobileRef.current) showDetailPane(true)
             }}
-            onToggleGroup={(groupId) => {
+            onToggleGroup={(groupId, options) => {
+              if (options?.shiftKey && selectionAnchorRef.current) {
+                const range = idsInRange(displayGroupKeys, selectionAnchorRef.current, groupId)
+                setSelectedGroupIds(new Set(range))
+                return
+              }
+              selectionAnchorRef.current = groupId
               setSelectedGroupIds((current) => {
                 const next = new Set(current)
                 if (next.has(groupId)) next.delete(groupId)
@@ -609,6 +642,7 @@ export default function App(): JSX.Element {
               await library.deleteEntries(ids)
               setSelecting(false)
               setSelectedGroupIds(new Set())
+              selectionAnchorRef.current = null
               if (isMobileRef.current) showListPane(false)
             })()
           }}

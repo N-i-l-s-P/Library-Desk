@@ -1,3 +1,4 @@
+import { useRef } from 'react'
 import {
   formatCopyBoth,
   formatCopyGeneralAll,
@@ -24,7 +25,8 @@ interface LibraryListProps {
   selecting?: boolean
   selectedGroupIds?: ReadonlySet<string>
   onSelect: (id: string) => void
-  onToggleGroup?: (groupId: string) => void
+  /** Toggle or Shift-range select a group row. */
+  onToggleGroup?: (groupId: string, options?: { shiftKey?: boolean }) => void
   onDelete: (entry: Entry) => void
   onDuplicate: (id: string) => void
   onExportEntry: (id: string) => void
@@ -146,6 +148,8 @@ export function LibraryList({
   onExportEntry,
 }: LibraryListProps): JSX.Element {
   const groups = groupEntriesForDisplay(entries)
+  /** Captured on checkbox click so onChange can read Shift (preventDefault broke checked UI). */
+  const checkboxShiftRef = useRef(false)
 
   return (
     <nav className={selecting ? 'library is-selecting' : 'library'} aria-label="Bibliothek">
@@ -172,7 +176,18 @@ export function LibraryList({
               group.versions.find((entry) => entry.id === selectedId) ?? group.representative
             const checked = selectedGroupIds?.has(group.key) ?? false
             return (
-              <li key={group.key} className={active ? 'group is-active' : 'group'}>
+              <li
+                key={group.key}
+                className={
+                  active
+                    ? checked
+                      ? 'group is-active is-checked'
+                      : 'group is-active'
+                    : checked
+                      ? 'group is-checked'
+                      : 'group'
+                }
+              >
                 <div className="group-row">
                   {selecting ? (
                     <label className="group-select">
@@ -180,7 +195,12 @@ export function LibraryList({
                         type="checkbox"
                         checked={checked}
                         aria-label={`„${group.representative.title}“ auswählen`}
-                        onChange={() => onToggleGroup?.(group.key)}
+                        onClick={(event) => {
+                          checkboxShiftRef.current = event.shiftKey
+                        }}
+                        onChange={() => {
+                          onToggleGroup?.(group.key, { shiftKey: checkboxShiftRef.current })
+                        }}
                       />
                     </label>
                   ) : null}
@@ -188,9 +208,9 @@ export function LibraryList({
                     type="button"
                     className="group-main"
                     aria-current={active && !showChips ? 'true' : undefined}
-                    onClick={() => {
+                    onClick={(event) => {
                       if (selecting) {
-                        onToggleGroup?.(group.key)
+                        onToggleGroup?.(group.key, { shiftKey: event.shiftKey })
                         return
                       }
                       onSelect(group.representative.id)

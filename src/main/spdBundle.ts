@@ -1,10 +1,13 @@
+import { createHash } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
 import { basename } from 'node:path'
 import {
   buildExportBundle,
+  entryToExportRow,
   parseExportBundleDetailed,
   type EntryExportMediaPaths,
 } from '../shared/exportFormat'
+import { hashCanonicalLibraryContent } from '../shared/libraryContentHash'
 import { mediaZipPath, packSpdZip, unpackSpdZip } from '../shared/spdZip'
 import type { AttachmentRef, Entry, ImportLibraryResult } from '../shared/types'
 import { resolveLocalAudioFile, writeAudioFromBuffer } from './audioFs'
@@ -91,6 +94,25 @@ export async function buildSpdZipBuffer(
   const { mediaById, files } = collectMedia(audioRoot, coverRoot, attachmentsRoot, entries)
   const json = buildExportBundle(entries, mediaById)
   return packSpdZip(json, files)
+}
+
+/** Content hash for quit-diff; same media sources as zip backup, no backup-folder I/O. */
+export function computeLibraryContentHash(
+  audioRoot: string,
+  coverRoot: string,
+  attachmentsRoot: string,
+  entries: Entry[],
+): string {
+  const { mediaById, files } = collectMedia(audioRoot, coverRoot, attachmentsRoot, entries)
+  const media = files.map((file) => ({
+    path: file.path,
+    sha256: createHash('sha256').update(file.data).digest('hex'),
+  }))
+  const rows = entries.map((entry) => {
+    const row = entryToExportRow(entry, mediaById[entry.id] ?? {})
+    return row as unknown as Record<string, unknown> & { id: string }
+  })
+  return hashCanonicalLibraryContent({ entries: rows, media })
 }
 
 export async function importSpdZipBuffer(

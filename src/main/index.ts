@@ -7,6 +7,7 @@ import {
   defaultAutoBackupFolder,
   runAutoBackup,
   settingsFilePath,
+  shouldAskQuitBackup,
   startAutoBackupScheduler,
   stopAutoBackupScheduler,
 } from './autoBackupService'
@@ -120,6 +121,14 @@ app.on('before-quit', (event) => {
     event.preventDefault()
     return
   }
+  try {
+    if (!shouldAskQuitBackup()) {
+      quitConfirmed = true
+      return
+    }
+  } catch {
+    // Hash/Deps fehlgeschlagen → lieber Dialog zeigen
+  }
   event.preventDefault()
   quitPromptInFlight = true
   void (async () => {
@@ -157,6 +166,7 @@ app.on('before-quit', (event) => {
           if (retry.response === 1) return
         }
       }
+      // „Ohne Backup“: Hash bleibt unverändert (nächster Quit fragt wieder)
       quitConfirmed = true
       app.quit()
     } finally {
